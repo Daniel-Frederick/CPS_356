@@ -1,3 +1,4 @@
+#include <ctype.h>
 #include <fcntl.h>
 #include <stdio.h>
 #include <unistd.h>
@@ -29,15 +30,10 @@ int main(int argc, char *argv[]) {
       for (ssize_t j = 0; j < bytesRead; ++j) {
         if (buffer[j] == 'U' || buffer[j] == 'D') {
           sumUD++;
-        } else if ((buffer[j] >= 'A' && buffer[j] <= 'Z') ||
-                   (buffer[j] >= 'a' && buffer[j] <= 'z')) {
+        } else if (!isspace((unsigned char)buffer[j])) {
           nonUDCount++;
         }
       }
-    }
-
-    if (bytesRead == -1) {
-      perror("Error reading file");
     }
 
     close(fd);

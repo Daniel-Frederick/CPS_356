@@ -1,13 +1,16 @@
 # How to run Program
 
-install meson and ninja:
-sudo apt install meson ninja-buld
-Note: If you don't want to install meson and ninja, just use the countUD executable in the root directory
+- I used Meson as the build system. To run you can either install Meson or use gcc.
+- I provided an executable called countUD case you just want to run that.
 
-run cmds:
-meson setup build
+How I compiled my program:
 
-meson compiler -C build
+I installed meson and ninja:
+sudo apt install meson ninja-build
 
-./build/countUD [files]
+1. meson setup build
+
+2. meson compile -C build
+
+3. ./build/countUD [files]
 
