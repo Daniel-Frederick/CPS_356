@@ -10,7 +10,7 @@ int main(int argc, char *argv[]) {
   // Check if at least one file was given
   if (argc == 1) {
     printf(2, "No files provided.\n");
-    exit(1);
+    exit();
   }
 
   // Loop through each file provided
@@ -41,9 +41,5 @@ int main(int argc, char *argv[]) {
   printf(1, "'U' or 'D' chars: %d\n", sumUD);
   printf(2, "Non 'U' or 'D' chars: %d\n", nonUDCount);
 
-  if (sumUD > 0) {
-    exit(0);
-  } else {
-    exit(1);
-  }
+  exit();
 }
