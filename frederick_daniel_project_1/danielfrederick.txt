@@ -1,7 +1,27 @@
 nano .bashrc
 source .bashrc
 cd 2025SpringCPS-356/
+ls
 cd Xv6-OS-with-custom-modifications/
+ls
 make
 make qemu
 make qemu-nox
+
+ls
+shutdown
+
+code .
+
+make clean
+make qemu-nox
+
+echo DDD tesing UUU > test.txt
+countUD test.txt
+cat test.txt
+
+echo U banana    D > test.txt
+countUD test.txt
+cat test.txt
+shutdown
+
