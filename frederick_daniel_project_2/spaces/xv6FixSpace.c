@@ -22,7 +22,7 @@ int main(int argc, char *argv[]) {
 
     char buffer[1024];
     int bytesRead;
-    int prevWasNewline = 0; // No bool in Xv6, using int
+    int prevWasNewline = 0;
 
     // Read the file in chunks
     while ((bytesRead = read(fd, buffer, sizeof(buffer))) > 0) {
@@ -39,7 +39,7 @@ int main(int argc, char *argv[]) {
       }
     }
 
-    if (bytesRead < 0) { // Corrected read error check
+    if (bytesRead < 0) {
       write(2, "Error reading file ", 19);
       write(2, argv[i], strlen(argv[i]));
       write(2, "\n", 1);

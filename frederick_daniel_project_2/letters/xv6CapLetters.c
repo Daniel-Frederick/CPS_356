@@ -3,7 +3,6 @@
 #include "types.h"
 #include "user.h"
 
-// Renamed functions to avoid conflicts
 char upper(char c) {
   if (c >= 'a' && c <= 'z') {
     return c - 'a' + 'A';
