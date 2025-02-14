@@ -6,9 +6,9 @@
 #include <unistd.h>
 
 int main(int argc, char *argv[]) {
-  if (argc == 1) {
-    printf("No file given!");
-    return 0;
+  if (argc != 2) {
+    printf("Enter one file!");
+    exit(1);
   }
 
   int p[2];
