@@ -14,4 +14,4 @@ sudo apt install meson ninja-build
 
 3. ./build/mypipe [files]
 
-In xv6, I modified the Makefile in the user directory by adding my two files, xv6CapLetters.c and xv6FixSpace.c, which are also in the user directory.
+In xv6, I modified the Makefile in the user directory by adding my file xv6mypipe.c which I also added in the user directory.
