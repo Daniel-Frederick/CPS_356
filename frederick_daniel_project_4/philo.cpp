@@ -1,131 +1,106 @@
-// Adapted from:
-// https://mariusbancila.ro/blog/2017/01/16/dining-philosophers-in-cpp11/
+// Adapted from Dijkstra's Solution in c++20
+// https://en.wikipedia.org/wiki/Dining_philosophers_problem
 #include <array>
-#include <atomic>
 #include <chrono>
-#include <iomanip>
 #include <iostream>
 #include <mutex>
 #include <random>
-#include <string>
+#include <semaphore>
 #include <string_view>
 #include <thread>
 
 constexpr int no_of_philosophers = 5;
 
-struct fork {
-  std::mutex mutex;
+enum class State {
+  THINKING = 0,
+  HUNGRY = 1,
+  EATING = 2,
 };
 
-struct table {
-  std::atomic<bool> ready{false};
-  std::array<fork, no_of_philosophers> forks;
+inline size_t left(size_t i) {
+  return (i + no_of_philosophers - 1) % no_of_philosophers;
+}
+
+inline size_t right(size_t i) { return (i + 1) % no_of_philosophers; }
+
+State state[no_of_philosophers];
+std::mutex crit_region_mtx;
+std::mutex output_mtx;
+
+// Create an array of philosopher names.
+const std::array<std::string_view, no_of_philosophers> philosopher_names = {
+    "Aristotle", "Platon", "Descartes", "Kant", "Nietzsche"};
+
+std::binary_semaphore both_forks_available[no_of_philosophers]{
+    std::binary_semaphore(0), std::binary_semaphore(0),
+    std::binary_semaphore(0), std::binary_semaphore(0),
+    std::binary_semaphore(0),
 };
 
-struct philosopher {
-private:
-  std::string const name;
-  table const &dinnertable;
-  fork &left_fork;
-  fork &right_fork;
-  std::thread lifethread;
-  std::mt19937 rng{std::random_device{}()};
-
-public:
-  philosopher(std::string n, table const &t, fork &l, fork &r)
-      : name(n), dinnertable(t), left_fork(l), right_fork(r),
-        lifethread(&philosopher::dine, this) {}
-
-  ~philosopher() { lifethread.join(); }
-
-  void dine() {
-    while (!dinnertable.ready)
-      ;
-
-    do {
-      eat();
-      think();
-    } while (dinnertable.ready);
+void test(size_t i) {
+  if (state[i] == State::HUNGRY && state[left(i)] != State::EATING &&
+      state[right(i)] != State::EATING) {
+    state[i] = State::EATING;
+    both_forks_available[i].release();
   }
+}
 
-  void print(std::string text) {
-    // This mutex is used to serialize prints. Without this lock, the output
-    // from multiple philosophers may become jumbled together.
-    static std::mutex lockprint;
-
-    std::lock_guard<std::mutex> cout_lock(lockprint);
-    std::cout << std::left << std::setw(10) << std::setfill(' ') << name << text
-              << std::endl;
-
-    // cout_lock is automatically destructed here and releases lockprint
-  }
-
-  // This version of eat() differs from the correct solution provided in the
-  // referenced article. This version almost always results in a deadlock
-  // that causes all philosophers to starve. It is not guaranteed to produce
-  // deadlock because there is still a race condition to acquire both forks
-  // before a neighbor acquires one of the forks that are needed.
-  void eat() {
-    static thread_local std::uniform_int_distribution<> dist(1, 6);
-
-    left_fork.mutex.lock();
-    print(" acquired left fork");
-
-    // This delay makes if very likely the race will be lost and another
-    // philosopher will grab the right fork before this philosopher gets it.
-    // Please note: the race condition still exists without this delay! The
-    // probability of losing the race is reduced but not eliminated by
-    // deleting the next line.
-    std::this_thread::sleep_for(std::chrono::milliseconds(dist(rng) * 50));
-
-    right_fork.mutex.lock();
-    print(" acquired right fork");
-
-    std::lock_guard<std::mutex> left_lock(left_fork.mutex, std::adopt_lock);
-    std::lock_guard<std::mutex> right_lock(right_fork.mutex, std::adopt_lock);
-
-    print(" started eating.");
-
-    std::this_thread::sleep_for(std::chrono::milliseconds(dist(rng) * 50));
-
-    print(" finished eating.\n");
-
-    // left_lock and right_lock are automatically destructed here and release
-    // their respective mutexes
-  }
-
-  void think() {
-    static thread_local std::uniform_int_distribution<> wait(1, 6);
-    std::this_thread::sleep_for(std::chrono::milliseconds(wait(rng) * 150));
-
-    print(" is thinking ");
-  }
-};
-
-void dine() {
-  std::this_thread::sleep_for(std::chrono::seconds(1));
-  std::cout << "Dinner started!" << std::endl;
-
+void think(size_t i) {
   {
-    table table;
-    std::array<philosopher, no_of_philosophers> philosophers{{
-        {"Aristotle", table, table.forks[0], table.forks[1]},
-        {"Plato", table, table.forks[1], table.forks[2]},
-        {"Descartes", table, table.forks[2], table.forks[3]},
-        {"Kant", table, table.forks[3], table.forks[4]},
-        {"Nietzsche", table, table.forks[4], table.forks[0]},
-    }};
-
-    table.ready = true;
-    std::this_thread::sleep_for(std::chrono::seconds(5));
-    table.ready = false;
+    std::lock_guard<std::mutex> lk(output_mtx);
+    std::cout << philosopher_names[i] << " is thinking" << std::endl;
   }
+  std::this_thread::sleep_for(std::chrono::milliseconds(6));
+}
 
-  std::cout << "Dinner done!" << std::endl;
+void take_forks(size_t i) {
+  {
+    std::lock_guard<std::mutex> lk(crit_region_mtx);
+    state[i] = State::HUNGRY;
+    {
+      std::lock_guard<std::mutex> lk(output_mtx);
+      std::cout << "\t\t" << philosopher_names[i] << " is HUNGRY" << std::endl;
+    }
+    test(i);
+  }
+  both_forks_available[i].acquire();
+}
+
+void eat(size_t i) {
+  {
+    std::lock_guard<std::mutex> lk(output_mtx);
+    std::cout << "\t\t\t\t" << philosopher_names[i] << " is EATING"
+              << std::endl;
+  }
+  std::this_thread::sleep_for(std::chrono::milliseconds(6));
+}
+
+void put_forks(size_t i) {
+  std::lock_guard<std::mutex> lk(crit_region_mtx);
+  state[i] = State::THINKING;
+  test(left(i));
+  test(right(i));
+}
+
+void philosopher(size_t i, std::stop_token stopToken) {
+  while (!stopToken.stop_requested()) {
+    think(i);
+    take_forks(i);
+    eat(i);
+    put_forks(i);
+  }
 }
 
 int main() {
-  dine();
+  std::cout << "Dinner Started!" << std::endl;
+  std::jthread t0([&](std::stop_token st) { philosopher(0, st); });
+  std::jthread t1([&](std::stop_token st) { philosopher(1, st); });
+  std::jthread t2([&](std::stop_token st) { philosopher(2, st); });
+  std::jthread t3([&](std::stop_token st) { philosopher(3, st); });
+  std::jthread t4([&](std::stop_token st) { philosopher(4, st); });
 
+  std::this_thread::sleep_for(std::chrono::seconds(5));
+
+  std::cout << "Dinner Done!" << std::endl;
   return 0;
 }
